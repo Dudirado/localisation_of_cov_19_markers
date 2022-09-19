@@ -6,6 +6,8 @@ from pathlib import Path
 import models
 from matplotlib import pyplot as plt
 import plot_segmentations
+import models.unet
+import models.unet_plusplus_resnet50
    
 tf.compat.v1.disable_eager_execution()
 
@@ -106,7 +108,10 @@ def main(modelName,weightFile,modelFolder,outputFolder, logitboost=[1,1,1,1,1], 
         """
         paramStr = (loaddir/'parameterSettings.txt').read_text()
         paramDict = eval(paramStr)
-                
+        main_path=os.getcwd()
+        main_path=main_path.replace("\\inference", "")
+        data_path=os.path.join(main_path,'Dataset_BUSI_with_GT')
+        paramDict['dataPath']=r'C:\Users\DUDIRADO\Documents\GitHub\localisation_of_cov_19_markers\Data\convex_hdf'
         """
         Finding newest weight file if not set manually
         """
@@ -176,7 +181,7 @@ def main(modelName,weightFile,modelFolder,outputFolder, logitboost=[1,1,1,1,1], 
     paramDict['task'] = 'segmentation'
     settype = 'both'  
     from balancedDataloader import return_testset
-    test_set = return_testset(paramDict, numpy=True)
+    test_set,titles = return_testset(paramDict, numpy=True)
 
     print('Test set loaded')
         
@@ -206,7 +211,34 @@ def main(modelName,weightFile,modelFolder,outputFolder, logitboost=[1,1,1,1,1], 
     predY_ = np.argmax(predY_onehot_,-1)
     predY[predY_==4] = 4
     predY_onehot = np.array(np.stack([predY==i for i in range(0,np.size(predY_onehot,-1))],-1),dtype='float32')
-       
+    import matplotlib.pyplot as plt
+
+    def show_layer(predY,predY_,predY_onehot,test_set,sample,titles):
+        plt.figure()
+        # subplot(r,c) provide the no. of rows and columns
+        f, axarr = plt.subplots(2, 4)
+        plt.suptitle('{}, Sample number {} '.format(titles[sample], sample))
+        # use the created array to output your multiple images. In this case I have stacked 4 images vertically
+        axarr[0,0].imshow(test_set[0][sample,:,:,0]/255)
+        axarr[0, 0].title.set_text('Input')
+        axarr[0,1].imshow(predY[sample,:,:])
+        axarr[0, 1].title.set_text('predY')
+        axarr[0,2].imshow(predY_[sample,:,:])
+        axarr[0, 2].title.set_text('predY_')
+        axarr[0,3].imshow(predY_onehot[sample,:,:,0])
+        axarr[0, 3].title.set_text('predY L0')
+        axarr[1, 0].imshow(predY_onehot[sample, :, :, 1])
+        axarr[1, 0].title.set_text('predY L1')
+        axarr[1, 1].imshow(predY_onehot[sample, :, :, 2])
+        axarr[1, 1].title.set_text('predY L2')
+        axarr[1, 2].imshow(predY_onehot[sample, :, :, 3])
+        axarr[1, 2].title.set_text('predY L3')
+        axarr[1, 3].imshow(predY_onehot[sample, :, :, 4])
+        axarr[1, 3].title.set_text('predY L4')
+        pass
+
+    sample=17
+    show_layer(predY,predY_,predY_onehot,test_set,sample,titles)
     """ Compute metrics """
     IoverU_cat_list = [np.sum(np.squeeze(np.array(predY==i,dtype=int) * np.array(tarY==i,dtype=int))>0) / np.sum((np.array(predY==i,dtype=int) + np.array(tarY==i,dtype=int))>0) for i in range(0,np.size(test_set[1],-1))]
     IoverU_cat = np.mean(IoverU_cat_list)

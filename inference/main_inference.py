@@ -19,19 +19,21 @@ modelList = ["(1)_Unet",
 weightList = ['FinalWeights','FinalWeights','FinalWeights','FinalWeights']            
 logitboost = [[1,1,5,3.5,1],[1,1,5,3.5,1],[1,1,1,1,1],[1,1,8,8,1]]       
 
+"""
 # ensemble model:
 modelList = ["(2)_Unet_augmentation",
              "(3)_Unet_pp_augmentation",
              "(4)_Deeplabv3_augmentation"]
 weightList = [['FinalWeights','FinalWeights','FinalWeights']]
 logitboost = [[1,1,2,2,2]]       
+"""
 
 acc = np.zeros(len(modelList))
 Dice_bin = np.zeros(len(modelList))
 Dice_cat = np.zeros(len(modelList))
 
 rows = []
-for i in range(0,len(modelList)):
+for i in range(1,len(modelList)):
     acc[i], Dice_bin[i], Dice_cat[i] = inference_segmentation.main(modelFolder=modelFolder,
                                                                    modelName=modelList[i],
                                                                    weightFile=weightList[i],

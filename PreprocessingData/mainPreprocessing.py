@@ -16,7 +16,7 @@ import h5py
 #%%
 parser = argparse.ArgumentParser(description='Loading and saving files from the synced drive folder')
 
-parser.add_argument('--loaddir', typ=str, help='Indicate the absolute path to the folder with the original data')
+parser.add_argument('--loaddir', type=str, help='Indicate the absolute path to the folder with the original data')
 parser.add_argument('--savedir', type=str, help='Indicate the direct path where to save the processed data')
 parser.add_argument('--ProcessedFilesName', default=r"ProcessedFiles.txt", help='Indicate the name of the file in which to save the information regarding which files have been preprocessed')
 

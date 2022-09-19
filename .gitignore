@@ -1,2 +1,5 @@
 .spyproject/
 __pycache__/
+*.jpg
+*.png
+Dataset_BUSI_with_GT.zip

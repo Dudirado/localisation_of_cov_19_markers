@@ -6,7 +6,7 @@ import copy
 from pathlib import Path
 import scipy.signal as ss
 import augmentation.image_augmentation as ia
-
+import cv2
 
 ### Define all the helper functions for the dataloader
 
@@ -207,20 +207,45 @@ def return_full_dataset_loader(dataPath, numpy, paramDict):
     [preprocessFunc, search_key, dict_key] = init_params(paramDict)
 
     datasets = []
-    dataPaths = [dataPath / 'val', dataPath / 'test']
+    dataPaths = [dataPath]#, dataPath / 'test']
+    import os
+    import h5py
     for dataPath in dataPaths:
+        def convert_file(input_dir, output_dir):
 
-        framesWithLabelInSet = list(dataPath.rglob(f"*{search_key}*.hdf5"))
+            filenames = next(os.walk(input_dir), (None, None, []))[2]  # [] if no file
+            for file in filenames:
+                #Input file:
+                file_path=os.path.join(input_dir,file)
+                image = cv2.imread(file_path)
+                HEIGHT = 200
+                WIDTH = 260
+                image = cv2.resize(image, (WIDTH, HEIGHT), interpolation=cv2.INTER_CUBIC)
+                #image = cv2.resize(image, (WIDTH,HEIGHT), interpolation=cv2.INTER_CUBIC)
+                #Output file:
+                output_file=file.replace('.jpg','.hdf5')
+                output_file=output_file.replace('.png','.hdf5')
+                output_file = output_file.replace('.JPG', '.hdf5')
+                new_filepath = os.path.join(output_dir,output_file)
+                #HD5Y:
+                f = h5py.File(new_filepath,"w")
+                f.create_dataset(name='image',data=image)
+
+        input_dir=r'C:\Users\DUDIRADO\Documents\GitHub\localisation_of_cov_19_markers\Data\convex'
+        output_dir=r'C:\Users\DUDIRADO\Documents\GitHub\localisation_of_cov_19_markers\Data\convex_hdf'
+        convert_file(input_dir,output_dir)
+        search_key='.'
+        framesWithLabelInSet = list(dataPath.rglob(f"*{search_key}*hdf5"))
         target_shape = (len(framesWithLabelInSet),paramDict['input_size'][0],paramDict['input_size'][1])
     
         x = np.zeros((len(framesWithLabelInSet),paramDict['input_size'][0],paramDict['input_size'][1],paramDict['input_size'][-1]), dtype=np.float32)
-        y  = np.zeros(target_shape, dtype=np.float32)
-    
+        y = np.zeros(target_shape, dtype=np.float32)
+        z = next(os.walk(input_dir), (None, None, []))[2]
         for frame_id, frame in enumerate(framesWithLabelInSet):
     
             hf = h5py.File(frame, 'r')
             x[frame_id] = np.array(hf['image'], dtype=np.float32)
-            y[frame_id] = np.array(hf[dict_key], dtype=np.float32)
+            y[frame_id] = np.array(hf['image'], dtype=np.float32)[:,:,0]
             hf.close()
     
         y = (y+1).astype(np.uint8) #background is now class0, and all classes are +1 to not have negative values
@@ -228,7 +253,7 @@ def return_full_dataset_loader(dataPath, numpy, paramDict):
     
         # Preprocessing of x
         final_x = preprocessFunc(x)
-        y = one_hot(y, paramDict['num_classes'])
+        #y = one_hot(y, paramDict['num_classes'])
         
         test_set = (final_x,y.astype(np.float32))
         if not numpy:
@@ -236,12 +261,9 @@ def return_full_dataset_loader(dataPath, numpy, paramDict):
     
         datasets.append(test_set)
 
-    combined_set_x = np.concatenate((datasets[0][0],datasets[1][0]),axis=0)
-    combined_set_y = np.concatenate((datasets[0][1],datasets[1][1]),axis=0)
-    return (combined_set_x,combined_set_y)    
-
-
-
+    combined_set_x = datasets[0][0]#np.concatenate((datasets[0][0],datasets[1][0]),axis=0)
+    combined_set_y = datasets[0][1]#np.concatenate((datasets[0][1],datasets[1][1]),axis=0)
+    return (combined_set_x,combined_set_y),z
 
 def def_target_shape(paramDict):  
     return [None,paramDict['input_size'][0], paramDict['input_size'][1],paramDict['num_classes']]
@@ -271,7 +293,6 @@ def training_dataloaders(paramDict, dataPath):
     paramDict['val_steps_per_epoch'] = int(np.ceil(paramDict['val_size'] / paramDict['batch_size']))
 
     return [train_set, validation_set]
-
 
 def return_testset(paramDict, numpy=True):
     """
